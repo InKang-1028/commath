@@ -1,11 +1,16 @@
-"""모든 프로토콜이 같이 쓰는 수학/암호 함수 모음."""
+"""모든 프로토콜이 같이 쓰는 수학/암호 함수 + 네트워크 함수 모음."""
 
+import argparse
 import base64
 import json
 import math
 import random
+import socket
 
 from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+
+TEST_SERVER = "10.41.12.51"   # 수업 테스트 서버 (VPN 접속 필요)
 
 
 # ===================== 소수 판정 =====================
@@ -117,7 +122,7 @@ def random_generator(p):
 def random_non_generator(p):
     """생성원이 아닌 원소 (Protocol IV 테스트용)."""
     g = random.randint(2, p - 1)
-    while is_generator(g, p) or g == 1:
+    while is_generator(g, p):
         g = random.randint(2, p - 1)
     return g
 
@@ -129,19 +134,20 @@ def dh_secret_to_aes_key(secret):
 
 # ===================== AES-ECB-256 + Base64 =====================
 def aes_encrypt(key, text):
-    data = text.encode()
-    pad = 16 - len(data) % 16                  # PKCS#7 패딩
-    data += bytes([pad]) * pad
-    encrypted = AES.new(key, AES.MODE_ECB).encrypt(data)
+    encrypted = AES.new(key, AES.MODE_ECB).encrypt(pad(text.encode(), AES.block_size))  # PKCS#7 패딩
     return base64.b64encode(encrypted).decode()
 
 
 def aes_decrypt(key, b64_text):
     data = AES.new(key, AES.MODE_ECB).decrypt(base64.b64decode(b64_text))
-    return data[:-data[-1]].decode()           # 패딩 제거
+    return unpad(data, AES.block_size).decode()                                       # 패딩 제거
 
 
 # ===================== JSON 메시지 송수신 =====================
+class PeerError(Exception):
+    """상대가 opcode 3 오류 메시지를 보냈을 때."""
+
+
 def send_json(conn, msg):
     text = json.dumps(msg)
     conn.sendall(text.encode())
@@ -149,8 +155,98 @@ def send_json(conn, msg):
 
 
 def recv_json(conn):
-    data = conn.recv(4096)
-    if not data:
-        return None
-    print("[Received] ", data.decode())
-    return json.loads(data.decode())
+    """JSON 하나가 완성될 때까지 이어 받는다 (TCP는 메시지가 쪼개져 올 수 있음)."""
+    data = b""
+    while True:
+        chunk = conn.recv(4096)
+        if not chunk:
+            raise ConnectionError("상대가 연결을 끊었음")
+        data += chunk
+        try:
+            msg = json.loads(data.decode())
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            if len(data) > 1_000_000:
+                raise ValueError("JSON 형식이 잘못된 메시지")
+            continue
+        print("[Received] ", data.decode())
+        return msg
+
+
+def expect(conn, opcode, type_=None):
+    """메시지를 받아서 opcode/type 을 확인한다. opcode 3(오류)이면 PeerError."""
+    msg = recv_json(conn)
+    if not isinstance(msg, dict):
+        raise ValueError("JSON 객체가 아닌 메시지: {}".format(msg))
+    if msg.get("opcode") == 3:
+        raise PeerError(msg.get("error"))
+    if msg.get("opcode") != opcode or (type_ is not None and msg.get("type") != type_):
+        raise ValueError("예상과 다른 메시지 (opcode {}, type {} 기대): {}".format(opcode, type_, msg))
+    return msg
+
+
+# ===================== 실행 도우미 =====================
+def load_protocol(folder, role):
+    """protocolN/alice.py 같은 파일을 모듈로 불러온다 (파일 이름이 alice.py로 같아서 importlib 사용)."""
+    import importlib.util
+    import os
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), folder, role + ".py")
+    spec = importlib.util.spec_from_file_location(folder + "_" + role, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def alice_args(default_port, default_message=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--addr", default=TEST_SERVER, help="Bob 주소 (기본: 테스트 서버)")
+    parser.add_argument("-p", "--port", type=int, default=default_port)
+    if default_message is not None:
+        parser.add_argument("-m", "--message", default=default_message, help="Bob에게 보낼 메시지")
+    return parser.parse_args()
+
+
+def bob_args(default_port, default_message=None, extra=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", type=int, default=default_port)
+    if default_message is not None:
+        parser.add_argument("-m", "--message", default=default_message, help="Alice에게 보낼 메시지")
+    if extra:
+        extra(parser)
+    return parser.parse_args()
+
+
+def run_alice(addr, port, handle):
+    """Bob에 접속해서 handle(conn)을 실행. 오류가 나도 traceback 대신 한 줄로 출력."""
+    try:
+        with socket.create_connection((addr, port), timeout=15) as conn:
+            print("Alice -> {}:{} 접속".format(addr, port))
+            handle(conn)
+    except PeerError as e:
+        print("Bob이 보낸 오류:", e)
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        print("[Error]", type(e).__name__ + ":", e)
+
+
+def serve(port, handle):
+    """Bob 서버: 연결마다 handle(conn)을 실행. 한 연결에서 오류가 나도 서버는 계속 돈다."""
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("0.0.0.0", port))
+    server.listen()
+    print("Bob is listening on port", port, "(Ctrl+C로 종료)")
+    try:
+        while True:
+            conn, addr = server.accept()
+            print("\n=== Alice connected:", addr)
+            try:
+                with conn:
+                    conn.settimeout(60)
+                    handle(conn)
+            except PeerError as e:
+                print("Alice가 보낸 오류:", e)
+            except (OSError, ValueError, KeyError, TypeError) as e:
+                print("[Error]", type(e).__name__ + ":", e, "-> 다음 연결을 기다림")
+    except KeyboardInterrupt:
+        print("\nBob 종료")
+    finally:
+        server.close()

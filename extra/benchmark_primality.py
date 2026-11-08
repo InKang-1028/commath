@@ -24,10 +24,10 @@ def main():
             reference = reference or primes
             flag = "" if primes == reference else "  (differs from trial division!)"
             print("{:<20} {:<16} {:>12.3f} {:>8}{}".format(rname, tname, elapsed, len(primes), flag))
-    # Carmichael numbers fool Fermat (unless a random base shares a factor) but not Miller-Rabin
+    # Carmichael numbers fool Fermat for every base coprime to n (here base 2), but not Miller-Rabin
     for c in (561, 1105, 1729):
-        print("Carmichael {}: trial={}, fermat={}, miller-rabin={}".format(
-            c, is_prime_trial(c), is_prime_fermat(c, rounds=1), is_prime_miller_rabin(c)))
+        print("Carmichael {}: trial={}, fermat(base 2)={}, miller-rabin={}".format(
+            c, is_prime_trial(c), pow(2, c - 1, c) == 1, is_prime_miller_rabin(c)))
 
 
 if __name__ == "__main__":
