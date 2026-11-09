@@ -1,17 +1,18 @@
-"""추가 과제 - Eve (PPT 19~21): Alice와 Bob 사이의 메시지를 엿듣고(수동 공격) 평문을 복원한다.
+"""통합 Eve (PPT 19~21): Alice와 Bob 사이에서 메시지를 그대로 전달하면서 엿듣고(수동 공격) 평문을 복원한다.
 숫자가 작아서(400~500) 가능한 공격:
   Protocol II : n을 인수분해 -> d 계산 -> AES 키 복원
   Protocol III: g^x = B (mod p)인 x를 전부 대입해서 찾음 -> 공유 비밀 복원
 
-실행 1) 도청 기록 해독
-  python3 extra/eve.py                                (extra/logs/ 의 기록 전부)
-  python3 extra/eve.py extra/logs/adv_protocol_two.log
+실행: python3 eve.py                      번호를 물어봄 (1~4), Eve는 포트 5560에서 Alice를 기다림
+      python3 eve.py 2                    Protocol II  -> 테스트 서버 10.41.12.51:5552 로 중계
+      python3 eve.py 3                    Protocol III -> :5553
+      python3 eve.py 3 -a 127.0.0.1 -p 5555     (로컬 통합 Bob으로 중계)
+      그리고 다른 터미널에서 Alice를 Bob 대신 Eve에 접속: python3 alice.py 3 -a 127.0.0.1 -p 5560
+      --save <파일> 을 주면 엿들은 메시지를 extra/logs 와 같은 형식으로 저장
 
-실행 2) 실시간 도청: Alice -> Eve -> Bob 사이에서 메시지를 그대로 전달하면서 해독
-  python3 extra/eve.py --live --bob-port 5552         (Eve: 포트 5560, Bob = 테스트 서버 10.41.12.51:5552)
-  python3 alice.py 2 -a 127.0.0.1 -p 5560             (Alice는 Bob 대신 Eve에 접속)
-  --bob-addr 127.0.0.1 --bob-port 5555 처럼 주면 로컬 Bob을 대상으로 도청
-  --save <파일> 을 주면 엿들은 메시지를 extra/logs 와 같은 형식으로 저장
+도청 기록 해독: python3 eve.py --logs              (extra/logs/ 의 기록 전부)
+               python3 eve.py --logs extra/logs/adv_protocol_two.log
+포트는 아래 PORTS, EVE_PORT에서 읽는다 (-p, -e를 주면 그게 우선).
 """
 import argparse
 import glob
@@ -20,9 +21,14 @@ import os
 import socket
 import sys
 import threading
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 상위 폴더의 crypto_utils.py 사용
 
 from crypto_utils import TEST_SERVER, aes_decrypt, dh_secret_to_aes_key, prime_factors, to_int
+
+# 진짜 Bob 포트 (alice.py의 PORTS와 같게). 포트가 바뀌면 여기만 고치면 된다.
+PORTS = {1: 5551, 2: 5552, 3: 5553, 4: 5554}
+EVE_PORT = 5560     # Eve가 Alice를 기다리는 포트
+
+MENU = [(1, "I", "RSA 키 생성"), (2, "II", "RSA로 AES 키 전달"), (3, "III", "DH 키 교환"), (4, "IV", "DH 오류 처리")]
 
 
 class Eve:
@@ -31,7 +37,7 @@ class Eve:
     def __init__(self):
         self.key = None
 
-    def observe(self, msg):
+    def observe(self, msg, direction=""):
         opcode, kind = msg.get("opcode"), msg.get("type")
 
         # --- Protocol II: RSA ---
@@ -69,7 +75,8 @@ class Eve:
             if self.key is None:
                 print("  [Eve] 아직 키를 모름")
             else:
-                print("  [Eve] 해독한 메시지:", aes_decrypt(self.key, msg["encryption"]))
+                who = " ({})".format(direction) if direction else ""
+                print("  [Eve] 해독한 메시지{}:".format(who), aes_decrypt(self.key, msg["encryption"]))
         elif opcode == 3:
             print("  [Eve] 오류 메시지 관찰:", msg.get("error"))
 
@@ -106,7 +113,7 @@ def relay(src, dst, direction, eve, lock, save):
                         save.write(json.dumps(msg) + "\n")
                         save.flush()
                     try:
-                        eve.observe(msg)
+                        eve.observe(msg, direction.rstrip(":"))
                     except Exception as e:
                         print("  [Eve] 분석 실패:", type(e).__name__, e)
     except OSError:
@@ -156,18 +163,30 @@ def live(port, bob_addr, bob_port, save_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("logs", nargs="*", help="해독할 도청 기록 (생략 시 extra/logs/*.log)")
-    parser.add_argument("--live", action="store_true", help="실시간 도청 모드")
-    parser.add_argument("-p", "--port", type=int, default=5560, help="Eve가 열 포트 (실시간)")
-    parser.add_argument("--bob-addr", default=TEST_SERVER, help="진짜 Bob 주소 (실시간)")
-    parser.add_argument("--bob-port", type=int, default=5552, help="진짜 Bob 포트 (실시간)")
-    parser.add_argument("--save", help="엿들은 메시지를 저장할 파일 (실시간)")
+    parser.add_argument("protocol", type=int, nargs="?", choices=[1, 2, 3, 4], help="프로토콜 번호 (생략하면 물어봄)")
+    parser.add_argument("-a", "--addr", default=TEST_SERVER, help="진짜 Bob 주소 (기본: 테스트 서버)")
+    parser.add_argument("-p", "--port", type=int, help="진짜 Bob 포트 (기본: PORTS)")
+    parser.add_argument("-e", "--eve-port", type=int, default=EVE_PORT, help="Eve가 열 포트 (기본: EVE_PORT)")
+    parser.add_argument("--save", help="엿들은 메시지를 저장할 파일")
+    parser.add_argument("--logs", nargs="*", help="실시간 도청 대신 도청 기록 해독 (파일 생략 시 extra/logs/*.log)")
     args = parser.parse_args()
 
-    if args.live:
-        live(args.port, args.bob_addr, args.bob_port, args.save)
-    else:
-        logs = args.logs or sorted(glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "*.log")))
+    if args.logs is not None:
+        logs = args.logs or sorted(glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "extra", "logs", "*.log")))
         for path in logs:
             print("\n=====", os.path.basename(path))
             attack_log(path)
+        sys.exit()
+
+    # 번호를 안 주면 메뉴에서 고른다
+    while args.protocol is None:
+        for number, roman, name in MENU:
+            print("  {}. Protocol {:<3} {}  (Bob 포트 {})".format(number, roman, name, PORTS[number]))
+        try:
+            answer = input("엿들을 프로토콜 번호 (1~4): ").strip()
+        except (EOFError, KeyboardInterrupt):
+            sys.exit("\n종료. 번호를 직접 줄 수도 있음: python3 eve.py <1~4>")
+        if answer in ("1", "2", "3", "4"):
+            args.protocol = int(answer)
+
+    live(args.eve_port, args.addr, args.port or PORTS[args.protocol], args.save)

@@ -14,6 +14,7 @@ project_1/
 ├── venv.sh              가상환경 직접 활성화용 (선택, 실행 시 자동으로 .venv 사용)
 ├── alice.py             통합 Alice: python3 alice.py <1~4>
 ├── bob.py               통합 Bob: 포트 하나(5555)에서 요청 type(RSAKey/RSA/DH)을 보고 처리
+├── eve.py               통합 Eve: python3 eve.py <1~4>, Alice와 Bob 사이에서 중계하며 도청 (추가 과제)
 ├── crypto_utils.py      공통 함수 (소수 판정, RSA, DH, AES, JSON 송수신, 서버/클라이언트 실행)
 ├── protocol1/           Protocol I   (PPT 3)     RSA 키 생성·검증
 ├── protocol2/           Protocol II  (PPT 4–7)   RSA로 AES 키 전달 → AES 대화
@@ -22,7 +23,6 @@ project_1/
 │   ├── alice.py         protocol3의 Alice로 IV-I, IV-II가 각각 나올 때까지 반복 접속
 │   └── bob.py           일부러 잘못된 p 또는 g를 보내는 Bob
 └── extra/
-    ├── eve.py                   추가 과제: 엿들은 로그 해독
     ├── logs/                    공식 스켈레톤 저장소의 도청 로그
     └── benchmark_primality.py   소수 판정 3종 속도 비교
 ```
@@ -36,8 +36,8 @@ project_1/
 | II  | 5552 | `python3 protocol2/alice.py` | `python3 protocol2/bob.py` |
 | III | 5553 | `python3 protocol3/alice.py` | `python3 protocol3/bob.py` |
 | IV  | 5554 | `python3 protocol4/alice.py` | `python3 protocol4/bob.py` (prime/generator 오류 랜덤) |
-| Eve (기록 해독) | – | `python3 extra/eve.py` (logs/ 전부 해독) | |
-| Eve (실시간 도청) | 5560 | `python3 extra/eve.py --live --bob-port 5552` 실행 후 `python3 alice.py 2 -a 127.0.0.1 -p 5560` | |
+| Eve (기록 해독) | – | `python3 eve.py --logs` (extra/logs/ 전부 해독) | |
+| Eve (실시간 도청) | 5560 | `python3 eve.py 2` 실행 후 `python3 alice.py 2 -a 127.0.0.1 -p 5560` | |
 | 벤치마크 | – | `python3 extra/benchmark_primality.py` | |
 
 ## 통합 실행 — 파일 2개로 전부
@@ -49,6 +49,7 @@ project_1/
 | Bob (정상) | `python3 bob.py` (포트 5555, RSAKey·RSA·DH 모두 받음) |
 | Bob (Protocol IV) | `python3 bob.py --dh-error random` (또는 `prime` / `generator`) — RSA 요청은 정상 처리 |
 | 로컬 테스트 | `python3 alice.py 3 -a 127.0.0.1 -p 5555` |
+| Eve | `python3 eve.py` (번호를 물어봄) 또는 `python3 eve.py 2` / `3` — 포트 5560에서 Alice를 받아 Bob(5551~5554 자동)으로 중계. Alice는 `-a 127.0.0.1 -p 5560`으로 접속 |
 
 옵션
 - 로컬에서 테스트: 터미널 1에서 Bob 실행 → 터미널 2에서 `python3 protocolN/alice.py -a 127.0.0.1`

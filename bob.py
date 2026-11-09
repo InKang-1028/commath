@@ -5,15 +5,19 @@
 실행: python3 bob.py                         포트 5555, 정상 DH
       python3 bob.py --dh-error random       DH 요청에 잘못된 p 또는 g (Protocol IV)
       python3 bob.py --dh-error prime        (IV-I)   /   --dh-error generator  (IV-II)
+포트는 아래 PORT에서 읽는다 (-p를 주면 그게 우선).
 """
 from crypto_utils import bob_args, expect, load_protocol, serve
+
+# Bob 포트. 포트가 바뀌면 여기만 고치면 된다.
+PORT = 5555
 
 p1 = load_protocol("protocol1", "bob")
 p2 = load_protocol("protocol2", "bob")
 p3 = load_protocol("protocol3", "bob")
 p4 = load_protocol("protocol4", "bob")
 
-args = bob_args(5555, "hello", extra=lambda parser: parser.add_argument(
+args = bob_args(PORT, "hello", extra=lambda parser: parser.add_argument(
     "--dh-error", choices=["random", "prime", "generator"], help="DH 요청에 일부러 잘못된 p/g 보내기"))
 
 

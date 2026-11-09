@@ -27,11 +27,10 @@ EL2001 Mathematical Foundation of Computer Science
 
 ```
 project_1/
-├── alice.py, bob.py           통합 실행 파일
+├── alice.py, bob.py, eve.py   통합 실행 파일 (eve.py: 수동 공격자)
 ├── crypto_utils.py            수학·암호·네트워크 공통 모듈
 ├── protocol1/ ~ protocol4/    프로토콜별 Alice, Bob 구현
 └── extra/
-    ├── eve.py                 수동 공격자
     ├── benchmark_primality.py 소수 판정 알고리즘 비교
     └── logs/                  도청 기록 (과제 저장소 제공)
 ```
