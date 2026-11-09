@@ -36,4 +36,4 @@ def respond(conn, message):
 
 if __name__ == "__main__":
     args = bob_args(5552, "hello")
-    serve(args.port, lambda conn: handle(conn, args.message))
+    serve(args.port, lambda conn: handle(conn, args.message), args.addr)

@@ -1,5 +1,7 @@
 # Project 1-1: Asymmetric Cryptosystem (EL2001)
 
+> 구현 내용, 프로토콜별 메시지 흐름과 수학적 근거, 검증 결과: [HOW_IT_WORKS.md](HOW_IT_WORKS.md)
+
 ## 준비 (`project_1` 폴더에서)
 ```bash
 source venv.sh      # 처음엔 .venv 생성 + pycryptodome 설치, 이후엔 활성화만
@@ -34,7 +36,8 @@ project_1/
 | II  | 5552 | `python3 protocol2/alice.py` | `python3 protocol2/bob.py` |
 | III | 5553 | `python3 protocol3/alice.py` | `python3 protocol3/bob.py` |
 | IV  | 5554 | `python3 protocol4/alice.py` | `python3 protocol4/bob.py` (prime/generator 오류 랜덤) |
-| Eve | – | `python3 extra/eve.py` (logs/ 전부 해독) | |
+| Eve (기록 해독) | – | `python3 extra/eve.py` (logs/ 전부 해독) | |
+| Eve (실시간 도청) | 5560 | `python3 extra/eve.py --live --bob-port 5552` 실행 후 `python3 alice.py 2 -a 127.0.0.1 -p 5560` | |
 | 벤치마크 | – | `python3 extra/benchmark_primality.py` | |
 
 ## 통합 실행 — 파일 2개로 전부
@@ -52,4 +55,5 @@ project_1/
 - 다른 주소/포트: `-a <주소> -p <포트>`
 - 메시지 바꾸기 (II, III): `-m <메시지>` (기본값 Bob=hello, Alice=world)
 - Protocol IV Bob 오류 고정: `-f prime` 또는 `-f generator`
-- Bob은 연결 하나에서 오류가 나도 종료되지 않고 다음 연결을 기다림 (끄기: Ctrl+C)
+- 스켈레톤과 같은 옵션도 사용 가능: `--addr`, `--port`, `-l/--log` (Bob은 `-a`로 바인드 주소 지정)
+- Bob은 연결마다 스레드로 처리하며, 한 연결에서 오류가 나도 종료되지 않음 (끄기: Ctrl+C)
