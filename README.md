@@ -56,5 +56,6 @@ project_1/
 - 다른 주소/포트: `-a <주소> -p <포트>`
 - 메시지 바꾸기 (II, III): `-m <메시지>` (기본값 Bob=hello, Alice=world)
 - Protocol IV Bob 오류 고정: `-f prime` 또는 `-f generator`
+- 소수 범위 변경: `--min <최솟값> --max <최댓값>` (기본 400~500, 범위 안에서 난수). Alice와 Bob에 같은 범위를 줘야 함
 - 스켈레톤과 같은 옵션도 사용 가능: `--addr`, `--port`, `-l/--log` (Bob은 `-a`로 바인드 주소 지정)
 - Bob은 연결마다 스레드로 처리하며, 한 연결에서 오류가 나도 종료되지 않음 (끄기: Ctrl+C)

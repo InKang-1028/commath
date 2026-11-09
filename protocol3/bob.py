@@ -17,7 +17,7 @@ def handle(conn, message):
 
 
 def respond(conn, message):
-    # 2. p(400~500 소수), g(생성원), 내 DH 키쌍 생성 -> 보내기
+    # 2. p(범위 안의 소수, 기본 400~500), g(생성원), 내 DH 키쌍 생성 -> 보내기
     p = random_prime()
     g = random_generator(p)
     private = random.randint(2, p - 2)

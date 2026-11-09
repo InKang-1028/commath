@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 상위 폴더의 crypto_utils.py 사용
 import random
 
-from crypto_utils import (aes_decrypt, aes_encrypt, alice_args, dh_secret_to_aes_key, expect,
+from crypto_utils import (aes_decrypt, aes_encrypt, alice_args, dh_secret_to_aes_key, expect, in_prime_range,
                           is_generator, is_prime, run_alice, send_json, to_int)
 
 
@@ -23,7 +23,7 @@ def handle(conn, message):
     g = to_int(msg["parameter"]["g"])
 
     # 3. p 소수 판정 -> 실패하면 오류 전송 후 종료 (Protocol IV-I)
-    if not (is_prime(p) and 400 <= p <= 500):
+    if not (is_prime(p) and in_prime_range(p)):
         print("p =", p, "는 소수가 아님 -> 종료")
         send_json(conn, {"opcode": 3, "error": "incorrect prime number"})
         return

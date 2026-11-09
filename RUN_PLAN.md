@@ -188,6 +188,7 @@ Carmichael 561: trial=False, fermat(base 2)=True, miller-rabin=False
 | `-p`, `--port` | 공통 | 포트 (Alice 기본: 5550 + 프로토콜 번호, 통합 Bob 기본: 5555) |
 | `-m`, `--message` | Protocol II, III | 보낼 메시지 (Alice 기본 `world`, Bob 기본 `hello`) |
 | `-l`, `--log` | 공통 | 로그 레벨 (과제 기본 코드와의 호환용) |
+| `--min`, `--max` | 공통 | 소수 범위 (기본 400, 500). Bob은 이 범위에서 난수로 고르고, Alice는 이 범위로 검증한다. 양쪽에 같은 값을 준다 |
 | `--dh-error` | 통합 Bob | `random` / `prime` / `generator` |
 | `-f`, `--fault` | `protocol4/bob.py` | `random` / `prime` / `generator` |
 
@@ -200,4 +201,5 @@ Carmichael 561: trial=False, fermat(base 2)=True, miller-rabin=False
 | `ModuleNotFoundError: No module named 'Crypto'` | 가상환경 미활성화 → `source venv.sh` |
 | `[Error] TimeoutError` / 연결 거부 | VPN 로그인 확인, 테스트 서버가 열려 있는지 확인 후 재실행 |
 | 자체 Bob에 외부 접속 불가 | 방화벽 포트 허용, IP 주소 확인 |
+| Alice가 `INCORRECT` 또는 `incorrect prime number` 를 계속 출력 | Bob과 Alice의 `--min`/`--max` 값이 다름 → 양쪽 범위를 맞춘다 |
 | `Address already in use` | 같은 포트의 Bob이 이미 실행 중 → 기존 Bob 종료 또는 `-p` 로 다른 포트 사용 |

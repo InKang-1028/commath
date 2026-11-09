@@ -13,6 +13,9 @@ from Crypto.Util.Padding import pad, unpad
 
 TEST_SERVER = "10.41.12.51"   # 수업 테스트 서버 (VPN 접속 필요)
 
+# 소수 범위 (과제 기본값 400~500). p, q, DH의 p 모두 이 범위 안에서 난수로 고른다.
+PRIME_MIN, PRIME_MAX = 400, 500
+
 
 # ===================== 소수 판정 =====================
 def is_prime(n):
@@ -58,20 +61,39 @@ def is_prime_miller_rabin(n, rounds=20):
     return True
 
 
+def set_prime_range(low, high):
+    """소수 범위 변경. RSA 바이트 암호화(n > 255)와 DH 2바이트 키(p <= 65535)가 가능한 범위만 허용."""
+    global PRIME_MIN, PRIME_MAX
+    if not 2 <= low <= high <= 65535:
+        raise ValueError("범위는 2 <= min <= max <= 65535 이어야 함 (DH 공유 비밀을 2바이트로 표현)")
+    primes = [x for x in range(low, high + 1) if is_prime(x)]
+    if len(primes) < 2:
+        raise ValueError("범위 [{}, {}] 안에 소수가 2개 이상 있어야 함 (RSA의 p != q)".format(low, high))
+    if primes[0] * primes[1] <= 255:
+        raise ValueError("가장 작은 두 소수의 곱이 255보다 커야 함 (키 1바이트를 RSA로 암호화하려면 n > 255)")
+    if all(is_prime(x) for x in range(low, high + 1)):
+        raise ValueError("범위 안에 합성수가 있어야 함 (Protocol IV 테스트용)")
+    PRIME_MIN, PRIME_MAX = low, high
+
+
+def in_prime_range(n):
+    return PRIME_MIN <= n <= PRIME_MAX
+
+
 def random_prime(exclude=None):
-    """400~500 사이의 랜덤 소수."""
-    primes = [x for x in range(400, 501) if is_prime(x) and x != exclude]
+    """[PRIME_MIN, PRIME_MAX] 사이의 랜덤 소수."""
+    primes = [x for x in range(PRIME_MIN, PRIME_MAX + 1) if is_prime(x) and x != exclude]
     return random.choice(primes)
 
 
 def random_non_prime():
-    """400~500 사이의 랜덤 합성수 (Protocol IV 테스트용)."""
-    return random.choice([x for x in range(400, 501) if not is_prime(x)])
+    """[PRIME_MIN, PRIME_MAX] 사이의 랜덤 합성수 (Protocol IV 테스트용)."""
+    return random.choice([x for x in range(PRIME_MIN, PRIME_MAX + 1) if not is_prime(x)])
 
 
 # ===================== RSA =====================
 def rsa_generate_keypair():
-    """p, q: 400~500 소수 / n = pq / phi = (p-1)(q-1) / gcd(e, phi) = 1 / d = e^-1 mod phi"""
+    """p, q: 범위 안의 서로 다른 소수 / n = pq / phi = (p-1)(q-1) / gcd(e, phi) = 1 / d = e^-1 mod phi"""
     p = random_prime()
     q = random_prime(exclude=p)
     phi = (p - 1) * (q - 1)
@@ -204,6 +226,22 @@ def load_protocol(folder, role):
     return module
 
 
+def add_range_args(parser):
+    parser.add_argument("--min", type=int, default=PRIME_MIN, help="소수 범위 최솟값 (기본 400)")
+    parser.add_argument("--max", type=int, default=PRIME_MAX, help="소수 범위 최댓값 (기본 500)")
+
+
+def parse_with_range(parser):
+    """--min/--max 를 추가해서 파싱하고 소수 범위를 설정한다."""
+    add_range_args(parser)
+    args = parser.parse_args()
+    try:
+        set_prime_range(args.min, args.max)
+    except ValueError as e:
+        parser.error(str(e))
+    return args
+
+
 def alice_args(default_port, default_message=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--addr", default=TEST_SERVER, help="Bob 주소 (기본: 테스트 서버)")
@@ -211,7 +249,7 @@ def alice_args(default_port, default_message=None):
     if default_message is not None:
         parser.add_argument("-m", "--message", default=default_message, help="Bob에게 보낼 메시지")
     parser.add_argument("-l", "--log", default="INFO", help="로그 레벨 (스켈레톤 호환용)")
-    return parser.parse_args()
+    return parse_with_range(parser)
 
 
 def bob_args(default_port, default_message=None, extra=None):
@@ -223,7 +261,7 @@ def bob_args(default_port, default_message=None, extra=None):
         parser.add_argument("-m", "--message", default=default_message, help="Alice에게 보낼 메시지")
     if extra:
         extra(parser)
-    return parser.parse_args()
+    return parse_with_range(parser)
 
 
 def run_alice(addr, port, handle):
