@@ -6,6 +6,7 @@ import json
 import math
 import random
 import socket
+import threading
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -127,6 +128,13 @@ def random_non_generator(p):
     return g
 
 
+def to_int(value):
+    """공개키/파라미터 값: 정수 또는 base64 문자열(big endian 바이트) 모두 허용 (PPT 15)."""
+    if isinstance(value, int):
+        return value
+    return int.from_bytes(base64.b64decode(value), byteorder="big")
+
+
 def dh_secret_to_aes_key(secret):
     """공유 비밀 -> 2바이트(big endian) -> 16번 반복 = 32바이트 AES 키."""
     return secret.to_bytes(2, byteorder="big") * 16
@@ -202,12 +210,15 @@ def alice_args(default_port, default_message=None):
     parser.add_argument("-p", "--port", type=int, default=default_port)
     if default_message is not None:
         parser.add_argument("-m", "--message", default=default_message, help="Bob에게 보낼 메시지")
+    parser.add_argument("-l", "--log", default="INFO", help="로그 레벨 (스켈레톤 호환용)")
     return parser.parse_args()
 
 
 def bob_args(default_port, default_message=None, extra=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--addr", default="0.0.0.0", help="Bob이 열 주소")
     parser.add_argument("-p", "--port", type=int, default=default_port)
+    parser.add_argument("-l", "--log", default="INFO", help="로그 레벨 (스켈레톤 호환용)")
     if default_message is not None:
         parser.add_argument("-m", "--message", default=default_message, help="Alice에게 보낼 메시지")
     if extra:
@@ -227,25 +238,29 @@ def run_alice(addr, port, handle):
         print("[Error]", type(e).__name__ + ":", e)
 
 
-def serve(port, handle):
-    """Bob 서버: 연결마다 handle(conn)을 실행. 한 연결에서 오류가 나도 서버는 계속 돈다."""
+def _serve_one(conn, addr, handle):
+    print("\n=== Alice connected:", addr)
+    try:
+        with conn:
+            conn.settimeout(60)
+            handle(conn)
+    except PeerError as e:
+        print("Alice가 보낸 오류:", e)
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        print("[Error]", type(e).__name__ + ":", e, "-> 이 연결만 종료")
+
+
+def serve(port, handle, addr="0.0.0.0"):
+    """Bob 서버: 연결마다 스레드로 handle(conn)을 실행. 한 연결에서 오류가 나도 서버는 계속 돈다."""
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(("0.0.0.0", port))
-    server.listen()
-    print("Bob is listening on port", port, "(Ctrl+C로 종료)")
+    server.bind((addr, port))
+    server.listen(10)
+    print("Bob is listening on {}:{} (Ctrl+C로 종료)".format(addr, port))
     try:
         while True:
-            conn, addr = server.accept()
-            print("\n=== Alice connected:", addr)
-            try:
-                with conn:
-                    conn.settimeout(60)
-                    handle(conn)
-            except PeerError as e:
-                print("Alice가 보낸 오류:", e)
-            except (OSError, ValueError, KeyError, TypeError) as e:
-                print("[Error]", type(e).__name__ + ":", e, "-> 다음 연결을 기다림")
+            conn, peer = server.accept()
+            threading.Thread(target=_serve_one, args=(conn, peer, handle), daemon=True).start()
     except KeyboardInterrupt:
         print("\nBob 종료")
     finally:

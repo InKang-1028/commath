@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 
 import random
 
 from crypto_utils import (aes_decrypt, aes_encrypt, bob_args, dh_secret_to_aes_key, expect,
-                          random_generator, random_prime, send_json, serve)
+                          random_generator, random_prime, send_json, serve, to_int)
 
 
 def handle(conn, message):
@@ -28,7 +28,7 @@ def respond(conn, message):
     msg = expect(conn, 1, "DH")
 
     # 4. 공유 비밀 계산 -> AES 키 만들기
-    secret = pow(msg["public"], private, p)
+    secret = pow(to_int(msg["public"]), private, p)
     key = dh_secret_to_aes_key(secret)
     print("공유 비밀 =", secret, ", AES 키 =", key.hex())
 
@@ -42,4 +42,4 @@ def respond(conn, message):
 
 if __name__ == "__main__":
     args = bob_args(5553, "hello")
-    serve(args.port, lambda conn: handle(conn, args.message))
+    serve(args.port, lambda conn: handle(conn, args.message), args.addr)

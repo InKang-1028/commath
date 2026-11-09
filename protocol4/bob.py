@@ -40,4 +40,4 @@ def respond(conn, fault):
 if __name__ == "__main__":
     args = bob_args(5554, extra=lambda parser: parser.add_argument(
         "-f", "--fault", choices=["random", "prime", "generator"], default="random"))
-    serve(args.port, lambda conn: handle(conn, args.fault))
+    serve(args.port, lambda conn: handle(conn, args.fault), args.addr)

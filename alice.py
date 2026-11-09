@@ -14,6 +14,7 @@ parser.add_argument("protocol", type=int, choices=[1, 2, 3, 4], help="프로토�
 parser.add_argument("-a", "--addr", default=TEST_SERVER, help="Bob 주소 (기본: 테스트 서버)")
 parser.add_argument("-p", "--port", type=int, help="Bob 포트 (기본: 5550 + 프로토콜 번호)")
 parser.add_argument("-m", "--message", default="world", help="Bob에게 보낼 메시지 (II, III)")
+parser.add_argument("-l", "--log", default="INFO", help="로그 레벨 (스켈레톤 호환용)")
 args = parser.parse_args()
 port = args.port or 5550 + args.protocol
 
