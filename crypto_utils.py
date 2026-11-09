@@ -4,12 +4,44 @@ import argparse
 import base64
 import json
 import math
+import os
 import random
 import socket
+import subprocess
+import sys
 import threading
 
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+
+# ===================== 실행 환경 고정 =====================
+def _use_project_venv():
+    """pycryptodome이 없으면 프로젝트의 .venv python으로 같은 명령을 다시 실행한다.
+    .venv가 없으면 처음 한 번 만들고 pycryptodome을 설치한다. (source venv.sh 없이도 실행 가능)"""
+    root = os.path.dirname(os.path.abspath(__file__))
+    venv = os.path.join(root, ".venv")
+    python = os.path.join(venv, "Scripts", "python.exe") if os.name == "nt" else os.path.join(venv, "bin", "python")
+    if os.environ.get("PROJECT1_VENV_BOOTSTRAP"):
+        sys.exit("pycryptodome을 불러올 수 없음 -> {} -m pip install pycryptodome".format(python))
+    try:
+        if not os.path.exists(python):
+            print("[setup] {} 생성 중 (처음 한 번만)...".format(venv))
+            subprocess.check_call([sys.executable, "-m", "venv", venv])
+        if subprocess.call([python, "-c", "import Crypto"], stderr=subprocess.DEVNULL) != 0:
+            print("[setup] pycryptodome 설치 중 (처음 한 번만)...")
+            subprocess.check_call([python, "-m", "pip", "install", "-q", "pycryptodome"])
+    except (OSError, subprocess.CalledProcessError) as e:
+        sys.exit("[setup] 실패: {}\n직접 설치: pip3 install pycryptodome".format(e))
+    os.environ["PROJECT1_VENV_BOOTSTRAP"] = "1"
+    command = [python] + sys.argv
+    if os.name == "nt":
+        sys.exit(subprocess.call(command))
+    os.execv(python, command)
+
+
+try:
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad, unpad
+except ImportError:
+    _use_project_venv()
 
 TEST_SERVER = "10.41.12.51"   # 수업 테스트 서버 (VPN 접속 필요)
 

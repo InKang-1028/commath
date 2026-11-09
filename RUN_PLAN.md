@@ -9,12 +9,12 @@
 ```bash
 git switch main && git pull origin main
 cd project_1
-source venv.sh          # 처음 실행 시 .venv 생성 및 pycryptodome 설치, 이후에는 활성화만 수행
 ```
 
 - 테스트 서버(10.41.12.51)를 사용하려면 브라우저에서 **vpn.kentech.ac.kr** 에 로그인한다.
-- `venv.sh` 는 반드시 `source` 로 실행한다. 종료는 `deactivate`.
-- Windows PowerShell: `python -m venv .venv` → `.venv\Scripts\activate` → `pip install pycryptodome`
+- 가상환경은 따로 준비하지 않아도 된다. 어느 파일이든 `python3 <파일>` 로 실행하면 프로젝트의 `.venv` 를 자동으로 사용하며, `.venv` 가 없으면 첫 실행 때 자동으로 만들고 pycryptodome 을 설치한다 (수 초 소요, 인터넷 필요).
+- Python 3.9 이상이 필요하다 (`python3 --version`).
+- 아래 표의 모든 명령은 인자 없이 파일 이름만으로도 실행된다. `python3 alice.py` 는 실행할 프로토콜 번호를 물어본다.
 
 ---
 
@@ -23,7 +23,7 @@ source venv.sh          # 처음 실행 시 .venv 생성 및 pycryptodome 설치
 | 항목 | 내용 |
 |---|---|
 | 터미널 | 1개 |
-| 명령 | `python3 alice.py 1` (또는 `python3 protocol1/alice.py`) |
+| 명령 | `python3 alice.py 1` (또는 `python3 protocol1/alice.py`, 또는 `python3 alice.py` 실행 후 `1` 입력) |
 | 접속 대상 | 테스트 서버 5551 |
 
 예상 출력
@@ -198,7 +198,7 @@ Carmichael 561: trial=False, fermat(base 2)=True, miller-rabin=False
 
 | 증상 | 원인 및 조치 |
 |---|---|
-| `ModuleNotFoundError: No module named 'Crypto'` | 가상환경 미활성화 → `source venv.sh` |
+| `[setup] 실패` | 첫 실행 시 pycryptodome 설치 실패 (인터넷 연결 확인) → `pip3 install pycryptodome` 으로 직접 설치 |
 | `[Error] TimeoutError` / 연결 거부 | VPN 로그인 확인, 테스트 서버가 열려 있는지 확인 후 재실행 |
 | 자체 Bob에 외부 접속 불가 | 방화벽 포트 허용, IP 주소 확인 |
 | Alice가 `INCORRECT` 또는 `incorrect prime number` 를 계속 출력 | Bob과 Alice의 `--min`/`--max` 값이 다름 → 양쪽 범위를 맞춘다 |

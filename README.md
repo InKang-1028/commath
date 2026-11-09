@@ -3,16 +3,15 @@
 - 구현 내용, 프로토콜별 메시지 흐름과 수학적 근거, 검증 결과: [HOW_IT_WORKS.md](HOW_IT_WORKS.md)
 - 단계별 실행 순서와 예상 출력: [RUN_PLAN.md](RUN_PLAN.md)
 
-## 준비 (`project_1` 폴더에서)
-```bash
-source venv.sh      # 처음엔 .venv 생성 + pycryptodome 설치, 이후엔 활성화만
-```
-(슬라이드의 pycrypto 대신 pycryptodome 사용 — 같은 `Crypto` 모듈 제공. 끄기: `deactivate`)
+## 준비
+따로 할 것 없음. 어느 파일이든 `python3 <파일>` 로 실행하면 프로젝트의 `.venv` 를 자동으로 사용한다.
+`.venv` 가 없으면 첫 실행 때 한 번 자동으로 만들고 pycryptodome 을 설치한다 (수 초, 인터넷 필요).
+(슬라이드의 pycrypto 대신 pycryptodome 사용 — 같은 `Crypto` 모듈 제공. 직접 활성화하고 싶으면 `source venv.sh`)
 
 ## 폴더 구조
 ```
 project_1/
-├── venv.sh              가상환경 생성/활성화 (source로 실행)
+├── venv.sh              가상환경 직접 활성화용 (선택, 실행 시 자동으로 .venv 사용)
 ├── alice.py             통합 Alice: python3 alice.py <1~4>
 ├── bob.py               통합 Bob: 포트 하나(5555)에서 요청 type(RSAKey/RSA/DH)을 보고 처리
 ├── crypto_utils.py      공통 함수 (소수 판정, RSA, DH, AES, JSON 송수신, 서버/클라이언트 실행)
@@ -46,7 +45,7 @@ project_1/
 
 | 역할 | 명령 |
 |---|---|
-| Alice | `python3 alice.py 1` / `2` / `3` / `4` (테스트 서버, 포트 5551~5554 자동) |
+| Alice | `python3 alice.py` (번호를 물어봄) 또는 `python3 alice.py 1` / `2` / `3` / `4` (테스트 서버, 포트 5551~5554 자동) |
 | Bob (정상) | `python3 bob.py` (포트 5555, RSAKey·RSA·DH 모두 받음) |
 | Bob (Protocol IV) | `python3 bob.py --dh-error random` (또는 `prime` / `generator`) — RSA 요청은 정상 처리 |
 | 로컬 테스트 | `python3 alice.py 3 -a 127.0.0.1 -p 5555` |
