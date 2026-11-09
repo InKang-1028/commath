@@ -130,7 +130,7 @@ Protocol IV 모드에서는 `Alice가 보낸 오류: incorrect prime number` 또
 | 항목 | 내용 |
 |---|---|
 | 터미널 | 1개 |
-| 명령 | `python3 eve.py --logs` (특정 기록만: `python3 eve.py --logs extra/logs/adv_protocol_two.log`) |
+| 명령 | `python3 eve.py` (특정 기록만: `python3 eve.py extra/logs/adv_protocol_two.log`) |
 
 예상 출력
 ```
@@ -144,10 +144,10 @@ Protocol IV 모드에서는 `Alice가 보낸 오류: incorrect prime number` 또
 
 | 터미널 | 명령 | 설명 |
 |---|---|---|
-| 1 (Eve) | `python3 eve.py 2` | 포트 5560에서 Alice를 받아 테스트 서버 5552로 중계 (Protocol III은 `eve.py 3` → 5553) |
-| 2 (Alice) | `python3 alice.py 2 -a 127.0.0.1 -p 5560` | Bob 대신 Eve에 접속 (Protocol III은 `alice.py 3`) |
+| 1 (Eve) | `python3 eve.py --live 2` | 포트 5560에서 Alice를 받아 테스트 서버 5552로 중계 (Protocol III은 `eve.py --live 3` → 5553) |
+| 2 (Alice) | `python3 alice.py 2` | 같은 컴퓨터에 Eve가 떠 있으면 자동으로 Eve를 거침 (직접 지정: `-a 127.0.0.1 -p 5560`). Protocol III은 `alice.py 3` |
 
-- 로컬 Bob을 대상으로 할 경우: `python3 eve.py 2 -a 127.0.0.1 -p 5555`
+- 로컬 Bob을 대상으로 할 경우: `python3 eve.py --live 2 -a 127.0.0.1 -p 5555`
 - 도청한 메시지 저장: `--save <파일>` (저장한 파일은 6.1 방식으로 다시 해독 가능)
 
 예상 결과: Alice는 정상적으로 `hello` 를 수신하고, Eve 화면에는 다음이 출력된다.
