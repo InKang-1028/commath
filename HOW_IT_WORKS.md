@@ -69,7 +69,7 @@ flowchart LR
 |---|---|---|
 | `opcode` | int | 0: 요청, 1: 키·파라미터, 2: 암호화된 메시지, 3: 오류 |
 | `type` | string | `RSAKey`, `RSA`, `DH`, `AES` |
-| `public` | int | 공개키 (RSA의 e, DH의 g^x mod p) |
+| `public` | int 또는 base64 문자열 | 공개키 (RSA의 e, DH의 g^x mod p). 수신 시 두 형식 모두 처리하며, 송신은 정수로 한다 |
 | `private` | int | RSA 개인키 (Protocol I) |
 | `parameter` | JSON | RSAKey: `{p, q}`, RSA: `{n}`, DH: `{p, g}` |
 | `encrypted_key` | list | RSA로 암호화한 키 바이트 32개 |
@@ -204,13 +204,30 @@ sequenceDiagram
 | 상대방이 opcode 3 오류 전송 | 수신한 오류 메시지를 출력한다 |
 | 연결 끊김 또는 응답 없음 | 오류를 출력한다 (Alice는 15초 후 종료) |
 
-Bob은 한 연결에서 오류가 발생해도 종료되지 않고 다음 연결을 계속 처리한다.
+Bob은 연결마다 별도의 스레드에서 처리하므로 여러 Alice가 동시에 접속할 수 있으며, 한 연결에서 오류가 발생해도 다른 연결과 서버는 영향을 받지 않는다. 명령행 옵션(`-a`, `-p`, `-l`)은 과제 저장소의 기본 코드와 동일한 형식을 따른다.
 
 ---
 
 ## 8. 추가 과제 — 수동 공격자 Eve
 
-Eve는 Alice와 Bob 사이의 메시지를 도청만 하며, 공개된 값만으로 평문을 복원한다. 사용된 수가 작기 때문에 RSA와 DH의 안전성 가정이 성립하지 않는다.
+Eve는 Alice와 Bob 사이의 메시지를 도청만 하며, Alice와 Bob의 개인키 없이 **공개된 값(공개키와 파라미터)만으로** 평문을 복원한다. 사용된 수가 작기 때문에 RSA와 DH의 안전성 가정이 성립하지 않는다.
+
+Eve는 두 가지 방식으로 동작한다.
+
+- **도청 기록 해독**: 저장된 메시지 기록을 읽어 해독한다.
+- **실시간 도청**: Alice와 Bob 사이에서 메시지를 받은 그대로 전달하면서, 동시에 각 메시지를 분석하여 해독한다. 메시지를 변조하지 않으므로 Alice와 Bob의 통신은 정상적으로 진행된다.
+
+```mermaid
+sequenceDiagram
+    participant A as Alice
+    participant E as Eve
+    participant B as Bob
+    A->>E: 메시지
+    E->>B: 동일한 메시지 전달
+    B->>E: 응답
+    E->>A: 동일한 응답 전달
+    Note over E: 공개키로부터 비밀값 계산 후 AES 메시지 해독
+```
 
 ### 8.1 Protocol II: n의 소인수분해
 1. 도청한 공개키 (e, n)에서 √n(약 450) 이하의 수로 나누어 n = pq를 소인수분해한다.
@@ -237,6 +254,8 @@ Eve는 Alice와 Bob 사이의 메시지를 도청만 하며, 공개된 값만으
 | adv_protocol_three-1, -2, -3 | el2001, happy / bottle, neck / cpu, memory |
 | adv_protocol_three-prob-1 | how it is done, demon hunters |
 | adv_protocol_three-prob-2 | YOUR IDOL, rumi ZOEY mira |
+
+또한 실시간 도청 모드로 테스트 서버의 Protocol II(포트 5552)와 Protocol III(포트 5553) 통신을 중계하며, Alice와 Bob의 통신을 방해하지 않고 양방향 메시지(`hello`, `world`)를 모두 해독하였다.
 
 RSA와 DH의 안전성은 각각 큰 수의 소인수분해와 이산 로그 문제의 어려움에 기반한다. 이 결과는 충분히 큰 키 길이(예: 2048비트 이상)가 필요함을 보여 준다.
 
@@ -276,3 +295,4 @@ RSA와 DH의 안전성은 각각 큰 수의 소인수분해와 이산 로그 문
 | 독립 구현한 Alice로 자체 Bob에 접속 (I–III) | 모두 성공 |
 | 비정상 입력(잘못된 type, 연결 끊김, JSON이 아닌 데이터) | Bob이 오류를 출력하고 다음 연결을 정상 처리 |
 | 도청 기록 12개 해독 | 모두 성공 |
+| 실시간 도청 (테스트 서버 Protocol II, III 중계) | 통신 정상 유지, 양방향 메시지 해독 성공 |
