@@ -1,6 +1,7 @@
 # Project 1-1: Asymmetric Cryptosystem (EL2001)
 
-> 구현 내용, 프로토콜별 메시지 흐름과 수학적 근거, 검증 결과: [HOW_IT_WORKS.md](HOW_IT_WORKS.md)
+- 구현 내용, 프로토콜별 메시지 흐름과 수학적 근거, 검증 결과: [HOW_IT_WORKS.md](HOW_IT_WORKS.md)
+- 단계별 실행 순서와 예상 출력: [RUN_PLAN.md](RUN_PLAN.md)
 
 ## 준비 (`project_1` 폴더에서)
 ```bash
