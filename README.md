@@ -19,7 +19,7 @@ project_1/
 ├── protocol2/           Protocol II  (PPT 4–7)   RSA로 AES 키 전달 → AES 대화
 ├── protocol3/           Protocol III (PPT 8–11)  DH 키 교환 → AES 대화 (p, g 검증 포함)
 ├── protocol4/           Protocol IV  (PPT 12–13) 잘못된 p, g 오류 처리
-│   ├── alice.py         = protocol3의 Alice (기본 포트만 5554)
+│   ├── alice.py         protocol3의 Alice로 IV-I, IV-II가 각각 나올 때까지 반복 접속
 │   └── bob.py           일부러 잘못된 p 또는 g를 보내는 Bob
 └── extra/
     ├── eve.py                   추가 과제: 엿들은 로그 해독

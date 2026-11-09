@@ -26,14 +26,14 @@ def handle(conn, message):
     if not (is_prime(p) and in_prime_range(p)):
         print("p =", p, "는 소수가 아님 -> 종료")
         send_json(conn, {"opcode": 3, "error": "incorrect prime number"})
-        return
+        return "prime"
     print("p =", p, "-> 소수 판정: PASS")
 
     # 4. g 생성원 검증 -> 실패하면 오류 전송 후 종료 (Protocol IV-II)
     if not is_generator(g, p):
         print("g =", g, "는 생성원이 아님 -> 종료")
         send_json(conn, {"opcode": 3, "error": "incorrect generator"})
-        return
+        return "generator"
     print("g =", g, "-> 생성원 검증: PASS")
 
     # 5. 내 DH 키쌍 생성 -> 공개키 보내기

@@ -3,7 +3,7 @@
       python3 alice.py 1                  Protocol I   -> 테스트 서버 10.41.12.51:5551
       python3 alice.py 2 -m world         Protocol II  -> :5552
       python3 alice.py 3                  Protocol III -> :5553
-      python3 alice.py 4                  Protocol IV  -> :5554
+      python3 alice.py 4                  Protocol IV  -> :5554 (IV-I, IV-II 각각 나올 때까지 반복)
       python3 alice.py 3 -a 127.0.0.1 -p 5555     (로컬 통합 Bob에 접속)
 """
 import argparse
@@ -34,12 +34,16 @@ while args.protocol is None:
 
 port = args.port or 5550 + args.protocol
 
+if args.protocol == 4:                  # IV-I, IV-II가 각각 나올 때까지 반복
+    load_protocol("protocol4", "alice").run_until_both(args.addr, port, args.message)
+    sys.exit()
+
 if args.protocol == 1:
     handle = load_protocol("protocol1", "alice").handle
 elif args.protocol == 2:
     p2 = load_protocol("protocol2", "alice")
     handle = lambda conn: p2.handle(conn, args.message)
-else:                                   # III, IV: 같은 Alice (p, g 검증 포함)
+else:                                   # III (p, g 검증 포함)
     p3 = load_protocol("protocol3", "alice")
     handle = lambda conn: p3.handle(conn, args.message)
 

@@ -75,18 +75,25 @@ Bob이 보낸 메시지: hello
 | 항목 | 내용 |
 |---|---|
 | 터미널 | 1개 |
-| 명령 | `python3 alice.py 4` |
-| 접속 대상 | 테스트 서버 5554 (오류 종류가 무작위이므로 두 경우가 모두 나올 때까지 반복 실행) |
+| 명령 | `python3 alice.py 4` (또는 `python3 protocol4/alice.py`) |
+| 접속 대상 | 테스트 서버 5554 |
 
-예상 출력 (둘 중 하나)
+테스트 서버는 연결마다 잘못된 p 또는 g를 무작위로 보낸다. Alice는 IV-I과 IV-II가 각각 한 번씩 나올 때까지 자동으로 다시 접속한다 (최대 20회).
+
+예상 출력
 ```
-p = 493 는 소수가 아님 -> 종료
-[Sent]      {"opcode": 3, "error": "incorrect prime number"}
-```
-```
+########## 시도 1 (확인: 없음)
+p = 456 는 소수가 아님 -> 종료
+>>> IV-I  incorrect prime number 확인
+
+########## 시도 2 (확인: prime)
 p = 433 -> 소수 판정: PASS
-g = 154 는 생성원이 아님 -> 종료
-[Sent]      {"opcode": 3, "error": "incorrect generator"}
+g = 411 는 생성원이 아님 -> 종료
+>>> IV-II incorrect generator 확인
+
+========== Protocol IV 결과
+  IV-I  incorrect prime number : 확인
+  IV-II incorrect generator : 확인
 ```
 
 ---
@@ -172,7 +179,7 @@ Carmichael 561: trial=False, fermat(base 2)=True, miller-rabin=False
 1. Protocol I
 2. Protocol II
 3. Protocol III
-4. Protocol IV (두 가지 오류가 모두 나올 때까지)
+4. Protocol IV (두 가지 오류가 자동으로 각각 확인됨)
 5. 자체 Bob (필요한 경우)
 6. Eve 도청 기록 해독 → 실시간 도청
 7. 소수 판정 비교

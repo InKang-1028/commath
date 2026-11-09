@@ -189,7 +189,8 @@ sequenceDiagram
 ```
 
 - Alice는 p의 소수 판정을 먼저 수행하고, 통과한 경우에만 g의 생성원 여부를 검증한다. p가 소수가 아니면 Z_p*가 위수 p−1인 순환군이 아니므로 생성원 판정이 의미를 갖지 않기 때문이다.
-- Alice의 구현은 Protocol III와 동일하다. 검증 단계가 Protocol III의 Alice에 포함되어 있다.
+- Alice의 검증은 Protocol III와 동일하다. 검증 단계가 Protocol III의 Alice에 포함되어 있다.
+- 테스트 서버는 연결마다 두 오류 중 하나를 무작위로 발생시키므로, Protocol IV의 Alice는 IV-I과 IV-II가 각각 한 번씩 확인될 때까지 접속을 반복한 뒤 결과를 요약하여 출력한다. 각 접속은 독립된 정상 프로토콜 실행이다.
 - 공지에 따라 Bob의 공개키는 Base64로 인코딩하지 않고 정수로 전송한다.
 - 시험용 Bob(`protocol4/bob.py`)은 합성수 p 또는 생성원이 아닌 g를 선택하여 전송한다.
 
